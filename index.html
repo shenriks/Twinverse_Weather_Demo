@@ -217,16 +217,26 @@
       return Number.isNaN(d.getTime()) ? null : d;
     }
 
+    // Compact "1 Oct 14:11" style used for the "Forecast updated" label.
+    function updatedLabel(date) {
+      return new Intl.DateTimeFormat('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }).format(date);
+    }
+
     // ---- Render the forecast table ----
     function renderForecast(data) {
       const hours = Array.isArray(data && data.hours) ? data.hours : [];
       const body = document.getElementById('forecast-body');
 
-      // "Forecast updated" from the file (falls back to existing placeholder).
+      // "Forecast updated" comes from the file's `updated` value.
       const updated = parseTime(data && data.updated);
-      if (updated) {
-        document.getElementById('forecast-updated').textContent = rowTimeLabel(updated);
-      }
+      document.getElementById('forecast-updated').textContent =
+        updated ? updatedLabel(updated) : NA;
 
       let rowsHtml = '';
       // Always show exactly HOURS rows; missing rows/fields become N/A.
