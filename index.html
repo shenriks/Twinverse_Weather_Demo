@@ -167,6 +167,11 @@
   </div>
 
   <script>
+    // How many hours the table always shows.
+    const HOURS = 48;
+    const DATA_URL = 'forecast_data.json';
+    const NA = 'N/A';
+
     // ---- Live clock ("time now") ----
     function formatDateTime(date) {
       return new Intl.DateTimeFormat('en-GB', {
@@ -186,32 +191,7 @@
     updateClock();
     setInterval(updateClock, 1000);
 
-    // ---- Forecast table ----
-    // Base time of the forecast: 1 Oct, start at the top of the hour (14:00).
-    const FORECAST_YEAR = new Date().getFullYear();
-    const startTime = new Date(FORECAST_YEAR, 9, 1, 14, 0, 0); // month 9 = October
-
-    const HOURS = 48;
-
-    // Simple diurnal cycle:
-    //  - Temperature peaks mid-afternoon (~15:00), lowest before dawn (~05:00).
-    //  - Relative humidity is roughly inverse to temperature.
-    const TEMP_MEAN = 8.0;      // °C
-    const TEMP_AMPLITUDE = 5.0; // °C swing around the mean
-    const RH_MEAN = 80.0;       // %
-    const RH_AMPLITUDE = 15.0;  // % swing (inverse of temp)
-
-    function diurnalTemp(hourOfDay) {
-      // Peak at 15:00 -> shift so cosine max lands there.
-      const phase = ((hourOfDay - 15) / 24) * 2 * Math.PI;
-      return TEMP_MEAN + TEMP_AMPLITUDE * Math.cos(phase);
-    }
-
-    function diurnalRH(hourOfDay) {
-      const phase = ((hourOfDay - 15) / 24) * 2 * Math.PI;
-      return RH_MEAN - RH_AMPLITUDE * Math.cos(phase);
-    }
-
+    // ---- Helpers ----
     function rowTimeLabel(date) {
       return new Intl.DateTimeFormat('en-GB', {
         weekday: 'short',
@@ -223,27 +203,65 @@
       }).format(date);
     }
 
-    const body = document.getElementById('forecast-body');
-    let rowsHtml = '';
-
-    for (let i = 0; i < HOURS; i++) {
-      const t = new Date(startTime.getTime() + i * 3600 * 1000);
-      const hourOfDay = t.getHours();
-
-      const temp = diurnalTemp(hourOfDay);
-      const rh = diurnalRH(hourOfDay);
-
-      rowsHtml += `
-        <tr>
-          <td>${rowTimeLabel(t)}</td>
-          <td class="temp">${temp.toFixed(1)}</td>
-          <td class="rh">${rh.toFixed(0)}</td>
-          <td>0.0</td>
-          <td>0.0</td>
-        </tr>`;
+    // Returns NA when the value is missing (null/undefined/NaN), else formats it.
+    function fmt(value, digits) {
+      if (value === null || value === undefined || value === '' || Number.isNaN(Number(value))) {
+        return NA;
+      }
+      return Number(value).toFixed(digits);
     }
 
-    body.innerHTML = rowsHtml;
+    function parseTime(raw) {
+      if (!raw) return null;
+      const d = new Date(raw);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    // ---- Render the forecast table ----
+    function renderForecast(data) {
+      const hours = Array.isArray(data && data.hours) ? data.hours : [];
+      const body = document.getElementById('forecast-body');
+
+      // "Forecast updated" from the file (falls back to existing placeholder).
+      const updated = parseTime(data && data.updated);
+      if (updated) {
+        document.getElementById('forecast-updated').textContent = rowTimeLabel(updated);
+      }
+
+      let rowsHtml = '';
+      // Always show exactly HOURS rows; missing rows/fields become N/A.
+      for (let i = 0; i < HOURS; i++) {
+        const entry = hours[i] || {};
+        const t = parseTime(entry.time);
+
+        rowsHtml += `
+          <tr>
+            <td>${t ? rowTimeLabel(t) : NA}</td>
+            <td class="temp">${fmt(entry.temperature, 1)}</td>
+            <td class="rh">${fmt(entry.humidity, 0)}</td>
+            <td>${fmt(entry.rainfall, 1)}</td>
+            <td>${fmt(entry.snowfall, 1)}</td>
+          </tr>`;
+      }
+      body.innerHTML = rowsHtml;
+    }
+
+    // Render an all-N/A table so the layout is intact even if loading fails.
+    function renderEmpty() {
+      renderForecast({ hours: [] });
+    }
+
+    // ---- Load data ----
+    fetch(DATA_URL, { cache: 'no-store' })
+      .then((res) => {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(renderForecast)
+      .catch((err) => {
+        console.error('Could not load ' + DATA_URL + ':', err);
+        renderEmpty();
+      });
   </script>
 </body>
 </html>
