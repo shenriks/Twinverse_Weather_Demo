@@ -120,6 +120,36 @@
     .temp { color: #ffb86b; font-weight: 600; }
     .rh   { color: #7ac7ff; }
 
+    .actions {
+      display: flex;
+      justify-content: center;
+      margin-top: 1.5rem;
+    }
+
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: #16a34a;
+      color: #ffffff;
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-decoration: none;
+      padding: 0.9rem 1.8rem;
+      border-radius: 12px;
+      border: 1px solid #22c55e;
+      box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);
+      transition: background 0.15s ease, transform 0.05s ease;
+    }
+
+    .download-btn:hover { background: #22c55e; }
+    .download-btn:active { transform: translateY(1px); }
+
+    .download-btn svg {
+      width: 1.3rem;
+      height: 1.3rem;
+    }
+
     footer {
       margin-top: 1.5rem;
       color: var(--muted);
@@ -159,6 +189,18 @@
         </thead>
         <tbody id="forecast-body"></tbody>
       </table>
+    </div>
+
+    <div class="actions">
+      <a class="download-btn" href="forecast_data.json" download="forecast_data.json">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3v12" />
+          <path d="M7 10l5 5 5-5" />
+          <path d="M5 21h14" />
+        </svg>
+        Download Data
+      </a>
     </div>
 
     <footer>
