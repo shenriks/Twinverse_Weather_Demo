@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather Forecast · Lappeenranta</title>
+  <style>
+    :root {
+      --bg: #0f1724;
+      --card: #16213a;
+      --accent: #4ea8de;
+      --text: #e6edf3;
+      --muted: #9aa7b5;
+      --border: #27324a;
+      --row-alt: #1b2740;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: linear-gradient(160deg, #0b1220 0%, #0f1724 100%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    header h1 {
+      margin: 0 0 0.25rem;
+      font-size: 1.9rem;
+      font-weight: 600;
+    }
+
+    header .subtitle {
+      color: var(--muted);
+      margin: 0 0 1.5rem;
+      font-size: 0.95rem;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .meta .chip {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 1.1rem;
+      flex: 1 1 220px;
+    }
+
+    .meta .chip .label {
+      display: block;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 0.3rem;
+    }
+
+    .meta .chip .value {
+      font-size: 1.1rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .table-wrap {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-variant-numeric: tabular-nums;
+    }
+
+    thead th {
+      background: #101a30;
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.75rem 1rem;
+      text-align: right;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+    }
+
+    thead th:first-child { text-align: left; }
+
+    tbody td {
+      padding: 0.6rem 1rem;
+      text-align: right;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+
+    tbody td:first-child {
+      text-align: left;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    tbody tr:nth-child(even) { background: var(--row-alt); }
+    tbody tr:last-child td { border-bottom: none; }
+
+    .temp { color: #ffb86b; font-weight: 600; }
+    .rh   { color: #7ac7ff; }
+
+    footer {
+      margin-top: 1.5rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Weather Forecast · Lappeenranta</h1>
+      <p class="subtitle">48-hour hourly outlook · South Karelia, Finland</p>
+    </header>
+
+    <section class="meta">
+      <div class="chip">
+        <span class="label">Time now</span>
+        <span class="value" id="time-now">—</span>
+      </div>
+      <div class="chip">
+        <span class="label">Forecast updated</span>
+        <span class="value" id="forecast-updated">1 Oct 14:11</span>
+      </div>
+    </section>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Temp (°C)</th>
+            <th>Humidity (%)</th>
+            <th>Rainfall (mm)</th>
+            <th>Snowfall (mm)</th>
+          </tr>
+        </thead>
+        <tbody id="forecast-body"></tbody>
+      </table>
+    </div>
+
+    <footer>
+      Demo data · Twinverse Weather Demo
+    </footer>
+  </div>
+
+  <script>
+    // ---- Live clock ("time now") ----
+    function formatDateTime(date) {
+      return new Intl.DateTimeFormat('en-GB', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).format(date);
+    }
+
+    function updateClock() {
+      document.getElementById('time-now').textContent = formatDateTime(new Date());
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // ---- Forecast table ----
+    // Base time of the forecast: 1 Oct, start at the top of the hour (14:00).
+    const FORECAST_YEAR = new Date().getFullYear();
+    const startTime = new Date(FORECAST_YEAR, 9, 1, 14, 0, 0); // month 9 = October
+
+    const HOURS = 48;
+
+    // Simple diurnal cycle:
+    //  - Temperature peaks mid-afternoon (~15:00), lowest before dawn (~05:00).
+    //  - Relative humidity is roughly inverse to temperature.
+    const TEMP_MEAN = 8.0;      // °C
+    const TEMP_AMPLITUDE = 5.0; // °C swing around the mean
+    const RH_MEAN = 80.0;       // %
+    const RH_AMPLITUDE = 15.0;  // % swing (inverse of temp)
+
+    function diurnalTemp(hourOfDay) {
+      // Peak at 15:00 -> shift so cosine max lands there.
+      const phase = ((hourOfDay - 15) / 24) * 2 * Math.PI;
+      return TEMP_MEAN + TEMP_AMPLITUDE * Math.cos(phase);
+    }
+
+    function diurnalRH(hourOfDay) {
+      const phase = ((hourOfDay - 15) / 24) * 2 * Math.PI;
+      return RH_MEAN - RH_AMPLITUDE * Math.cos(phase);
+    }
+
+    function rowTimeLabel(date) {
+      return new Intl.DateTimeFormat('en-GB', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }).format(date);
+    }
+
+    const body = document.getElementById('forecast-body');
+    let rowsHtml = '';
+
+    for (let i = 0; i < HOURS; i++) {
+      const t = new Date(startTime.getTime() + i * 3600 * 1000);
+      const hourOfDay = t.getHours();
+
+      const temp = diurnalTemp(hourOfDay);
+      const rh = diurnalRH(hourOfDay);
+
+      rowsHtml += `
+        <tr>
+          <td>${rowTimeLabel(t)}</td>
+          <td class="temp">${temp.toFixed(1)}</td>
+          <td class="rh">${rh.toFixed(0)}</td>
+          <td>0.0</td>
+          <td>0.0</td>
+        </tr>`;
+    }
+
+    body.innerHTML = rowsHtml;
+  </script>
+</body>
+</html>
