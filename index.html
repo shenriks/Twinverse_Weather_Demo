@@ -106,6 +106,7 @@
 
     <div class="image-panel">
       <img
+        id="forecast-image"
         class="forecast-image"
         src="T2M_20260101_300_150_grid.gif"
         alt="Temperature forecast animation for Lappeenranta"
@@ -113,7 +114,7 @@
     </div>
 
     <div class="actions">
-      <a class="download-btn" href="T2M_20260101_300_150_grid.gif" download="T2M_20260101_300_150_grid.gif">
+      <a id="download-link" class="download-btn" href="T2M_20260101_300_150_grid.gif" download="T2M_20260101_300_150_grid.gif">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M12 3v12" />
@@ -128,5 +129,27 @@
       Animated forecast · Twinverse Weather Demo
     </footer>
   </div>
+
+  <script>
+    // Bust browser/CDN cache for the GIF whenever the forecast is regenerated.
+    // The query string changes only when forecast_data.json's "updated" value changes,
+    // so a fresh forecast is always fetched while unchanged forecasts stay cached.
+    const GIF = "T2M_20260101_300_150_grid.gif";
+
+    (async () => {
+      const img = document.getElementById("forecast-image");
+      const link = document.getElementById("download-link");
+      let version;
+      try {
+        const res = await fetch("forecast_data.json", { cache: "no-store" });
+        const data = await res.json();
+        version = encodeURIComponent(data.updated || Date.now());
+      } catch {
+        version = Date.now();
+      }
+      img.src = `${GIF}?v=${version}`;
+      link.href = `${GIF}?v=${version}`;
+    })();
+  </script>
 </body>
 </html>
