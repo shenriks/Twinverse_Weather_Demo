@@ -43,82 +43,21 @@
       font-size: 0.95rem;
     }
 
-    .meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .meta .chip {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 0.75rem 1.1rem;
-      flex: 1 1 220px;
-    }
-
-    .meta .chip .label {
-      display: block;
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      margin-bottom: 0.3rem;
-    }
-
-    .meta .chip .value {
-      font-size: 1.1rem;
-      font-weight: 600;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .table-wrap {
+    .image-panel {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 12px;
       overflow: hidden;
+      padding: 1rem;
     }
 
-    table {
+    .forecast-image {
+      display: block;
       width: 100%;
-      border-collapse: collapse;
-      font-variant-numeric: tabular-nums;
-    }
-
-    thead th {
+      height: auto;
+      border-radius: 8px;
       background: #101a30;
-      color: var(--muted);
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      padding: 0.75rem 1rem;
-      text-align: right;
-      border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 0;
     }
-
-    thead th:first-child { text-align: left; }
-
-    tbody td {
-      padding: 0.6rem 1rem;
-      text-align: right;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.9rem;
-    }
-
-    tbody td:first-child {
-      text-align: left;
-      color: var(--muted);
-      white-space: nowrap;
-    }
-
-    tbody tr:nth-child(even) { background: var(--row-alt); }
-    tbody tr:last-child td { border-bottom: none; }
-
-    .temp { color: #ffb86b; font-weight: 600; }
-    .rh   { color: #7ac7ff; }
 
     .actions {
       display: flex;
@@ -162,158 +101,32 @@
   <div class="container">
     <header>
       <h1>Weather Forecast · Lappeenranta</h1>
-      <p class="subtitle">48-hour hourly outlook · South Karelia, Finland</p>
+      <p class="subtitle">Temperature forecast animation · South Karelia, Finland</p>
     </header>
 
-    <section class="meta">
-      <div class="chip">
-        <span class="label">Time now</span>
-        <span class="value" id="time-now">—</span>
-      </div>
-      <div class="chip">
-        <span class="label">Forecast updated</span>
-        <span class="value" id="forecast-updated">1 Oct 14:11</span>
-      </div>
-    </section>
-
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>Temp (°C)</th>
-            <th>Humidity (%)</th>
-            <th>Rainfall (mm)</th>
-            <th>Snowfall (mm)</th>
-          </tr>
-        </thead>
-        <tbody id="forecast-body"></tbody>
-      </table>
+    <div class="image-panel">
+      <img
+        class="forecast-image"
+        src="T2M_20260101_300_150_grid.gif"
+        alt="Temperature forecast animation for Lappeenranta"
+      />
     </div>
 
     <div class="actions">
-      <a class="download-btn" href="forecast_data.json" download="forecast_data.json">
+      <a class="download-btn" href="T2M_20260101_300_150_grid.gif" download="T2M_20260101_300_150_grid.gif">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M12 3v12" />
           <path d="M7 10l5 5 5-5" />
           <path d="M5 21h14" />
         </svg>
-        Download Data
+        Download GIF
       </a>
     </div>
 
     <footer>
-      Demo data · Twinverse Weather Demo
+      Animated forecast · Twinverse Weather Demo
     </footer>
   </div>
-
-  <script>
-    // How many hours the table always shows.
-    const HOURS = 48;
-    const DATA_URL = 'forecast_data.json';
-    const NA = 'N/A';
-
-    // ---- Live clock ("time now") ----
-    function formatDateTime(date) {
-      return new Intl.DateTimeFormat('en-GB', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      }).format(date);
-    }
-
-    function updateClock() {
-      document.getElementById('time-now').textContent = formatDateTime(new Date());
-    }
-    updateClock();
-    setInterval(updateClock, 1000);
-
-    // ---- Helpers ----
-    function rowTimeLabel(date) {
-      return new Intl.DateTimeFormat('en-GB', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      }).format(date);
-    }
-
-    // Returns NA when the value is missing (null/undefined/NaN), else formats it.
-    function fmt(value, digits) {
-      if (value === null || value === undefined || value === '' || Number.isNaN(Number(value))) {
-        return NA;
-      }
-      return Number(value).toFixed(digits);
-    }
-
-    function parseTime(raw) {
-      if (!raw) return null;
-      const d = new Date(raw);
-      return Number.isNaN(d.getTime()) ? null : d;
-    }
-
-    // Compact "1 Oct 14:11" style used for the "Forecast updated" label.
-    function updatedLabel(date) {
-      return new Intl.DateTimeFormat('en-GB', {
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      }).format(date);
-    }
-
-    // ---- Render the forecast table ----
-    function renderForecast(data) {
-      const hours = Array.isArray(data && data.hours) ? data.hours : [];
-      const body = document.getElementById('forecast-body');
-
-      // "Forecast updated" comes from the file's `updated` value.
-      const updated = parseTime(data && data.updated);
-      document.getElementById('forecast-updated').textContent =
-        updated ? updatedLabel(updated) : NA;
-
-      let rowsHtml = '';
-      // Always show exactly HOURS rows; missing rows/fields become N/A.
-      for (let i = 0; i < HOURS; i++) {
-        const entry = hours[i] || {};
-        const t = parseTime(entry.time);
-
-        rowsHtml += `
-          <tr>
-            <td>${t ? rowTimeLabel(t) : NA}</td>
-            <td class="temp">${fmt(entry.temperature, 1)}</td>
-            <td class="rh">${fmt(entry.humidity, 0)}</td>
-            <td>${fmt(entry.rainfall, 1)}</td>
-            <td>${fmt(entry.snowfall, 1)}</td>
-          </tr>`;
-      }
-      body.innerHTML = rowsHtml;
-    }
-
-    // Render an all-N/A table so the layout is intact even if loading fails.
-    function renderEmpty() {
-      renderForecast({ hours: [] });
-    }
-
-    // ---- Load data ----
-    fetch(DATA_URL, { cache: 'no-store' })
-      .then((res) => {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
-      .then(renderForecast)
-      .catch((err) => {
-        console.error('Could not load ' + DATA_URL + ':', err);
-        renderEmpty();
-      });
-  </script>
 </body>
 </html>
