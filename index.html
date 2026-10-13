@@ -104,14 +104,19 @@
       <p class="subtitle">Temperature forecast animation · South Karelia, Finland</p>
     </header>
 
-    <div class="image-panel">
-      <img
-        id="forecast-image"
-        class="forecast-image"
-        src="temperature_animation.gif"
-        alt="Temperature forecast animation for Lappeenranta"
-      />
-    </div>
+<div class="image-panel">
+  <video
+    id="forecast-video"
+    class="forecast-image"
+    controls
+    playsinline
+    muted
+    loop
+    preload="auto"
+    src="temperature_animation.mp4"
+    alt="Temperature forecast animation for Lappeenranta"
+  ></video>
+</div>
 
     <div class="actions">
       <a id="download-link" class="download-btn" href="temperature_animation.gif" download="temperature_animation.gif">
@@ -130,14 +135,26 @@
     </footer>
   </div>
 
+  // Add video player for the forecast animation
+<div class="media-wrap">
+  <video id="forecast-video" width="100%" playsinline muted loop>
+    <source src="temperature_animation.mp4" type="video/mp4" />
+  </video>
+
+  <div class="controls">
+    <button id="play-toggle" type="button">Pause</button>
+    <input id="seek" type="range" min="0" max="1000" value="0" />
+  </div>
+</div>  
+
   <script>
     // Bust browser/CDN cache for the GIF whenever the forecast is regenerated.
     // The query string changes only when latest_temperature_data.nc's "updated" value changes,
     // so a fresh forecast is always fetched while unchanged forecasts stay cached.
-    const GIF = "temperature_animation.gif";
+    const VIDEO = "temperature_animation.mp4";
 
     (async () => {
-      const img = document.getElementById("forecast-image");
+      const video = document.getElementById("forecast-video");
       const link = document.getElementById("download-link");
       let version;
       try {
@@ -147,8 +164,8 @@
       } catch {
         version = Date.now();
       }
-      img.src = `${GIF}?v=${version}`;
-      link.href = `${GIF}?v=${version}`;
+      video.src = `${VIDEO}?v=${version}`;
+      link.href = `${VIDEO}?v=${version}`;
     })();
   </script>
 </body>
