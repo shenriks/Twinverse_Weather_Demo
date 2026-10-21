@@ -8,7 +8,6 @@
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIINfQ3ynhZw1pKjMZ2V3K5x5nHGg1e4u0c="
     crossorigin=""
   >
   <script
@@ -64,7 +63,7 @@
 
     #map {
       width: 100%;
-      min-height: 620px;
+      height: clamp(390px, calc(100vh - 230px), 620px);
       background: #dce6eb;
     }
 
@@ -173,7 +172,7 @@
     @media (max-width: 850px) {
       body { padding: 0.6rem; }
       .dashboard { grid-template-columns: 1fr; }
-      #map { min-height: 58vh; }
+      #map { height: clamp(360px, 58vh, 520px); }
     }
   </style>
 </head>
@@ -188,7 +187,7 @@
         <div id="map"></div>
         <div class="controls">
           <button id="previous" type="button" aria-label="Previous hour">&#9664;</button>
-          <button id="play-pause" type="button">Pause</button>
+          <button id="play-pause" type="button">Play</button>
           <button id="next" type="button" aria-label="Next hour">&#9654;</button>
           <input id="time-slider" type="range" min="0" max="5" step="1" value="0" aria-label="Forecast hour">
           <span id="frame-label">Loading forecast…</span>
@@ -500,7 +499,8 @@
         fillCentreTable();
         addLegend();
         showFrame(0);
-        startAnimation();
+        // Start paused so the first frame is stable until the user presses Play.
+        playPauseButton.textContent = "Play";
         status.textContent = `Loaded ${forecast.length} hourly fields (${sourceWasKelvin ? "Kelvin converted to °C" : "interpreted as °C"}).`;
       } catch (error) {
         stopAnimation();
