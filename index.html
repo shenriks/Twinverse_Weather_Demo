@@ -1,172 +1,521 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Weather Forecast · Lappeenranta</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lappeenranta temperature forecast</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIINfQ3ynhZw1pKjMZ2V3K5x5nHGg1e4u0c="
+    crossorigin=""
+  >
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
   <style>
     :root {
-      --bg: #0f1724;
-      --card: #16213a;
-      --accent: #4ea8de;
-      --text: #e6edf3;
-      --muted: #9aa7b5;
-      --border: #27324a;
-      --row-alt: #1b2740;
+      color-scheme: light;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #17212b;
+      background: #f3f6f8;
     }
 
     * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-      background: linear-gradient(160deg, #0b1220 0%, #0f1724 100%);
-      color: var(--text);
-      min-height: 100vh;
-      padding: 2rem 1rem;
+      padding: 1.25rem;
     }
 
-    .container {
-      max-width: 980px;
+    main {
+      max-width: 1450px;
       margin: 0 auto;
     }
 
-    header h1 {
+    h1 {
       margin: 0 0 0.25rem;
-      font-size: 1.9rem;
-      font-weight: 600;
+      font-size: clamp(1.35rem, 2.5vw, 2rem);
     }
 
-    header .subtitle {
-      color: var(--muted);
-      margin: 0 0 1.5rem;
-      font-size: 0.95rem;
+    .subtitle {
+      margin: 0 0 1rem;
+      color: #52616d;
     }
 
-    .image-panel {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
+    .dashboard {
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(260px, 1fr);
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .panel {
       overflow: hidden;
+      border: 1px solid #d7dee3;
+      border-radius: 10px;
+      background: white;
+      box-shadow: 0 2px 10px rgb(0 0 0 / 6%);
+    }
+
+    #map {
+      width: 100%;
+      min-height: 620px;
+      background: #dce6eb;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      align-items: center;
+      padding: 0.75rem;
+      border-top: 1px solid #d7dee3;
+    }
+
+    button {
+      min-width: 2.5rem;
+      padding: 0.45rem 0.7rem;
+      border: 1px solid #a9b7c0;
+      border-radius: 6px;
+      background: #f7fafb;
+      color: inherit;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    button:hover { background: #eaf1f4; }
+    button:disabled { cursor: not-allowed; opacity: 0.45; }
+
+    #time-slider {
+      flex: 1 1 180px;
+      min-width: 130px;
+    }
+
+    #frame-label {
+      min-width: 205px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 650;
+    }
+
+    .side-panel {
       padding: 1rem;
     }
 
-    .forecast-image {
-      display: block;
-      width: 100%;
-      height: auto;
-      border-radius: 8px;
-      background: #101a30;
-    }
-
-    .actions {
-      display: flex;
-      justify-content: center;
-      margin-top: 1.5rem;
-    }
-
-    .download-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.6rem;
-      background: #16a34a;
-      color: #ffffff;
+    .side-panel h2 {
+      margin: 0 0 0.3rem;
       font-size: 1.1rem;
-      font-weight: 600;
-      text-decoration: none;
-      padding: 0.9rem 1.8rem;
-      border-radius: 12px;
-      border: 1px solid #22c55e;
-      box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);
-      transition: background 0.15s ease, transform 0.05s ease;
     }
 
-    .download-btn:hover { background: #22c55e; }
-    .download-btn:active { transform: translateY(1px); }
-
-    .download-btn svg {
-      width: 1.3rem;
-      height: 1.3rem;
+    .side-panel p {
+      margin: 0 0 0.8rem;
+      color: #60717c;
+      font-size: 0.9rem;
     }
 
-    footer {
-      margin-top: 1.5rem;
-      color: var(--muted);
-      font-size: 0.8rem;
-      text-align: center;
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-variant-numeric: tabular-nums;
+    }
+
+    th, td {
+      padding: 0.55rem 0.4rem;
+      border-bottom: 1px solid #e3e8eb;
+      text-align: left;
+    }
+
+    th { color: #4f606b; font-size: 0.85rem; }
+    tr.active { background: #e8f3ff; font-weight: 650; }
+
+    .legend {
+      min-width: 210px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: rgb(255 255 255 / 92%);
+      box-shadow: 0 1px 5px rgb(0 0 0 / 30%);
+      line-height: 1.25;
+    }
+
+    .legend-gradient {
+      height: 10px;
+      margin: 5px 0 2px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #30123b, #4668e8, #35b9ab, #a4dd35, #f7b32b, #d7191c);
+    }
+
+    .legend-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+    }
+
+    .temperature-overlay {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    .status {
+      margin-top: 0.8rem;
+      color: #52616d;
+      font-size: 0.83rem;
+    }
+
+    .error {
+      color: #a11717;
+      font-weight: 650;
+    }
+
+    @media (max-width: 850px) {
+      body { padding: 0.6rem; }
+      .dashboard { grid-template-columns: 1fr; }
+      #map { min-height: 58vh; }
     }
   </style>
 </head>
+
 <body>
-  <div class="container">
-    <header>
-      <h1>Weather Forecast · Lappeenranta</h1>
-      <p class="subtitle">Temperature forecast animation · South Karelia, Finland</p>
-    </header>
+  <main>
+    <h1>Lappeenranta temperature forecast</h1>
+    <p class="subtitle">Two-metre temperature, 21 October 2026</p>
 
-<div class="image-panel">
-  <video
-    id="forecast-video"
-    class="forecast-image"
-    controls
-    playsinline
-    muted
-    loop
-    preload="auto"
-    src="temperature_animation.mp4"
-    alt="Temperature forecast animation for Lappeenranta"
-  ></video>
-</div>
+    <div class="dashboard">
+      <section class="panel" aria-label="Temperature forecast map">
+        <div id="map"></div>
+        <div class="controls">
+          <button id="previous" type="button" aria-label="Previous hour">&#9664;</button>
+          <button id="play-pause" type="button">Pause</button>
+          <button id="next" type="button" aria-label="Next hour">&#9654;</button>
+          <input id="time-slider" type="range" min="0" max="5" step="1" value="0" aria-label="Forecast hour">
+          <span id="frame-label">Loading forecast…</span>
+        </div>
+      </section>
 
-    <div class="actions">
-      <a id="download-link" class="download-btn" href="temperature_animation.gif" download="temperature_animation.gif">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 3v12" />
-          <path d="M7 10l5 5 5-5" />
-          <path d="M5 21h14" />
-        </svg>
-        Download GIF
-      </a>
+      <aside class="panel side-panel">
+        <h2>Lappeenranta city centre</h2>
+        <p id="centre-coordinates"></p>
+        <table>
+          <thead>
+            <tr><th>Time (UTC)</th><th>Temperature</th></tr>
+          </thead>
+          <tbody id="centre-table"></tbody>
+        </table>
+        <p id="status" class="status">Reading latest_forecast_data.json…</p>
+      </aside>
     </div>
-
-    <footer>
-      Animated forecast · Twinverse Weather Demo
-    </footer>
-  </div>
-
-  // Add video player for the forecast animation
-<div class="media-wrap">
-  <video id="forecast-video" width="100%" playsinline muted loop>
-    <source src="temperature_animation.mp4" type="video/mp4" />
-  </video>
-
-  <div class="controls">
-    <button id="play-toggle" type="button">Pause</button>
-    <input id="seek" type="range" min="0" max="1000" value="0" />
-  </div>
-</div>  
+  </main>
 
   <script>
-    // Bust browser/CDN cache for the GIF whenever the forecast is regenerated.
-    // The query string changes only when latest_temperature_data.nc's "updated" value changes,
-    // so a fresh forecast is always fetched while unchanged forecasts stay cached.
-    const VIDEO = "temperature_animation.mp4";
+    // -----------------------------------------------------------------------
+    // ADJUST THESE VALUES if the temperature grid is misplaced or reversed.
+    // The grid is assumed to be a north-up, unrotated 60 m Cartesian grid.
+    // -----------------------------------------------------------------------
+    const Lappeenranta_center_lon = 28.1887;
+    const Lappeenranta_center_lat = 61.0583;
+    const grid_resolution_metres = 60;
+    const first_grid_row_is_north = true;
+    const first_grid_column_is_west = true;
 
-    (async () => {
-      const video = document.getElementById("forecast-video");
-      const link = document.getElementById("download-link");
-      let version;
-      try {
-        const res = await fetch("latest_temperature_data.nc", { cache: "no-store" });
-        const data = await res.json();
-        version = encodeURIComponent(data.updated || Date.now());
-      } catch {
-        version = Date.now();
+    const FORECAST_FILE = "latest_forecast_data.json";
+    const FORECAST_START_UTC = new Date("2026-10-21T06:00:00Z");
+    const EXPECTED_SHAPE = [6, 150, 300];
+    const FRAME_DURATION_MS = 1200;
+
+    const map = L.map("map", { preferCanvas: true }).setView(
+      [Lappeenranta_center_lat, Lappeenranta_center_lon],
+      12
+    );
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    const centreMarker = L.circleMarker(
+      [Lappeenranta_center_lat, Lappeenranta_center_lon],
+      { radius: 5, color: "#111", weight: 2, fillColor: "#fff", fillOpacity: 1 }
+    ).addTo(map).bindTooltip("Configured Lappeenranta centre");
+
+    const previousButton = document.querySelector("#previous");
+    const playPauseButton = document.querySelector("#play-pause");
+    const nextButton = document.querySelector("#next");
+    const slider = document.querySelector("#time-slider");
+    const frameLabel = document.querySelector("#frame-label");
+    const tableBody = document.querySelector("#centre-table");
+    const status = document.querySelector("#status");
+
+    document.querySelector("#centre-coordinates").textContent =
+      `${Lappeenranta_center_lat.toFixed(4)}° N, ${Lappeenranta_center_lon.toFixed(4)}° E`;
+
+    let forecast = null;
+    let frameIndex = 0;
+    let animationTimer = null;
+    let overlay = null;
+    let gridBounds = null;
+    let colourMin = 0;
+    let colourMax = 1;
+    let sourceWasKelvin = false;
+
+    function forecastTime(index) {
+      return new Date(FORECAST_START_UTC.getTime() + index * 60 * 60 * 1000);
+    }
+
+    function timeLabel(index) {
+      return forecastTime(index).toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "UTC"
+      });
+    }
+
+    function celsiusValue(value) {
+      if (value === null || !Number.isFinite(value)) return null;
+      return sourceWasKelvin ? value - 273.15 : value;
+    }
+
+    function validateAndPrepare(raw) {
+      const validShape = Array.isArray(raw)
+        && raw.length === EXPECTED_SHAPE[0]
+        && raw.every(frame => Array.isArray(frame)
+          && frame.length === EXPECTED_SHAPE[1]
+          && frame.every(row => Array.isArray(row) && row.length === EXPECTED_SHAPE[2]));
+
+      if (!validShape) {
+        throw new Error(`Expected JSON shape ${EXPECTED_SHAPE.join(" × ")}.`);
       }
-      video.src = `${VIDEO}?v=${version}`;
-      link.href = `${VIDEO}?v=${version}`;
-    })();
+
+      const finiteValues = raw.flat(2).filter(Number.isFinite);
+      if (!finiteValues.length) throw new Error("The forecast contains no finite temperature values.");
+
+      const sample = finiteValues.slice(0, Math.min(finiteValues.length, 5000)).sort((a, b) => a - b);
+      sourceWasKelvin = sample[Math.floor(sample.length / 2)] > 100;
+
+      // Avoid spreading all 270,000 values into Math.min/Math.max: some
+      // browsers impose a much smaller function-argument limit.
+      let actualMin = Infinity;
+      let actualMax = -Infinity;
+      for (const sourceValue of finiteValues) {
+        const value = celsiusValue(sourceValue);
+        if (value < actualMin) actualMin = value;
+        if (value > actualMax) actualMax = value;
+      }
+      colourMin = Math.floor(actualMin);
+      colourMax = Math.ceil(actualMax);
+      if (colourMin === colourMax) colourMax = colourMin + 1;
+
+      return raw;
+    }
+
+    function calculateGridBounds() {
+      const rows = EXPECTED_SHAPE[1];
+      const columns = EXPECTED_SHAPE[2];
+      const halfHeightMetres = rows * grid_resolution_metres / 2;
+      const halfWidthMetres = columns * grid_resolution_metres / 2;
+      const metresPerDegreeLat = 111320;
+      const metresPerDegreeLon = metresPerDegreeLat * Math.cos(Lappeenranta_center_lat * Math.PI / 180);
+
+      const latHalfSpan = halfHeightMetres / metresPerDegreeLat;
+      const lonHalfSpan = halfWidthMetres / metresPerDegreeLon;
+      return L.latLngBounds(
+        [Lappeenranta_center_lat - latHalfSpan, Lappeenranta_center_lon - lonHalfSpan],
+        [Lappeenranta_center_lat + latHalfSpan, Lappeenranta_center_lon + lonHalfSpan]
+      );
+    }
+
+    // Six-stop perceptual-ish temperature ramp.
+    const colourStops = [
+      [48, 18, 59],
+      [70, 104, 232],
+      [53, 185, 171],
+      [164, 221, 53],
+      [247, 179, 43],
+      [215, 25, 28]
+    ];
+
+    function colourFor(value) {
+      const normalised = Math.max(0, Math.min(1, (value - colourMin) / (colourMax - colourMin)));
+      const scaled = normalised * (colourStops.length - 1);
+      const left = Math.min(Math.floor(scaled), colourStops.length - 2);
+      const fraction = scaled - left;
+      const rgb = colourStops[left].map((component, i) =>
+        Math.round(component + fraction * (colourStops[left + 1][i] - component))
+      );
+      return rgb;
+    }
+
+    function frameAsDataUrl(frame) {
+      const rows = EXPECTED_SHAPE[1];
+      const columns = EXPECTED_SHAPE[2];
+      const canvas = document.createElement("canvas");
+      canvas.width = columns;
+      canvas.height = rows;
+      const context = canvas.getContext("2d");
+      const image = context.createImageData(columns, rows);
+
+      for (let displayRow = 0; displayRow < rows; displayRow += 1) {
+        const sourceRow = first_grid_row_is_north ? displayRow : rows - 1 - displayRow;
+        for (let displayColumn = 0; displayColumn < columns; displayColumn += 1) {
+          const sourceColumn = first_grid_column_is_west ? displayColumn : columns - 1 - displayColumn;
+          const value = celsiusValue(frame[sourceRow][sourceColumn]);
+          const pixel = (displayRow * columns + displayColumn) * 4;
+
+          if (value === null) {
+            image.data[pixel + 3] = 0;
+          } else {
+            const [red, green, blue] = colourFor(value);
+            image.data[pixel] = red;
+            image.data[pixel + 1] = green;
+            image.data[pixel + 2] = blue;
+            image.data[pixel + 3] = 185;
+          }
+        }
+      }
+
+      context.putImageData(image, 0, 0);
+      return canvas.toDataURL("image/png");
+    }
+
+    function displayIndicesForLatLng(latlng) {
+      if (!gridBounds.contains(latlng)) return null;
+      const rows = EXPECTED_SHAPE[1];
+      const columns = EXPECTED_SHAPE[2];
+      const west = gridBounds.getWest();
+      const east = gridBounds.getEast();
+      const south = gridBounds.getSouth();
+      const north = gridBounds.getNorth();
+      const displayColumn = Math.min(columns - 1, Math.floor((latlng.lng - west) / (east - west) * columns));
+      const displayRow = Math.min(rows - 1, Math.floor((north - latlng.lat) / (north - south) * rows));
+      return {
+        row: first_grid_row_is_north ? displayRow : rows - 1 - displayRow,
+        column: first_grid_column_is_west ? displayColumn : columns - 1 - displayColumn
+      };
+    }
+
+    function temperatureAtLatLng(latlng, frame = frameIndex) {
+      const indices = displayIndicesForLatLng(latlng);
+      if (!indices) return null;
+      return celsiusValue(forecast[frame][indices.row][indices.column]);
+    }
+
+    function updateTableSelection() {
+      tableBody.querySelectorAll("tr").forEach((row, index) => {
+        row.classList.toggle("active", index === frameIndex);
+      });
+    }
+
+    function showFrame(index) {
+      if (!forecast) return;
+      frameIndex = (index + forecast.length) % forecast.length;
+      slider.value = String(frameIndex);
+      frameLabel.textContent = `21 Oct 2026 · ${timeLabel(frameIndex)} UTC`;
+
+      const imageUrl = frameAsDataUrl(forecast[frameIndex]);
+      if (!overlay) {
+        overlay = L.imageOverlay(imageUrl, gridBounds, {
+          opacity: 0.82,
+          interactive: false,
+          className: "temperature-overlay"
+        }).addTo(map);
+      } else {
+        overlay.setUrl(imageUrl);
+      }
+      updateTableSelection();
+    }
+
+    function stopAnimation() {
+      if (animationTimer !== null) window.clearInterval(animationTimer);
+      animationTimer = null;
+      playPauseButton.textContent = "Play";
+    }
+
+    function startAnimation() {
+      stopAnimation();
+      playPauseButton.textContent = "Pause";
+      animationTimer = window.setInterval(() => showFrame(frameIndex + 1), FRAME_DURATION_MS);
+    }
+
+    function fillCentreTable() {
+      tableBody.replaceChildren();
+      const centre = L.latLng(Lappeenranta_center_lat, Lappeenranta_center_lon);
+      forecast.forEach((_, index) => {
+        const value = temperatureAtLatLng(centre, index);
+        const row = document.createElement("tr");
+        const timeCell = document.createElement("td");
+        const temperatureCell = document.createElement("td");
+        timeCell.textContent = timeLabel(index);
+        temperatureCell.textContent = value === null ? "—" : `${value.toFixed(1)} °C`;
+        row.append(timeCell, temperatureCell);
+        row.addEventListener("click", () => {
+          stopAnimation();
+          showFrame(index);
+        });
+        tableBody.append(row);
+      });
+    }
+
+    function addLegend() {
+      const legend = L.control({ position: "bottomright" });
+      legend.onAdd = () => {
+        const element = L.DomUtil.create("div", "legend");
+        element.innerHTML = `
+          <strong>Temperature at 2 m (°C)</strong>
+          <div class="legend-gradient"></div>
+          <div class="legend-labels"><span>${colourMin.toFixed(0)}</span><span>${colourMax.toFixed(0)}</span></div>
+        `;
+        return element;
+      };
+      legend.addTo(map);
+    }
+
+    previousButton.addEventListener("click", () => { stopAnimation(); showFrame(frameIndex - 1); });
+    nextButton.addEventListener("click", () => { stopAnimation(); showFrame(frameIndex + 1); });
+    playPauseButton.addEventListener("click", () => animationTimer === null ? startAnimation() : stopAnimation());
+    slider.addEventListener("input", event => { stopAnimation(); showFrame(Number(event.target.value)); });
+
+    map.on("mousemove", event => {
+      if (!forecast || !gridBounds.contains(event.latlng)) {
+        map.closeTooltip();
+        return;
+      }
+      const value = temperatureAtLatLng(event.latlng);
+      const temperature = value === null ? "No data" : `${value.toFixed(2)} °C`;
+      map.openTooltip(
+        `<strong>${temperature}</strong><br>${event.latlng.lat.toFixed(5)}° N, ${event.latlng.lng.toFixed(5)}° E`,
+        event.latlng,
+        { sticky: true, direction: "top", opacity: 0.95 }
+      );
+    });
+
+    async function initialise() {
+      try {
+        const response = await fetch(FORECAST_FILE, { cache: "no-store" });
+        if (!response.ok) throw new Error(`${FORECAST_FILE}: HTTP ${response.status}`);
+        forecast = validateAndPrepare(await response.json());
+        gridBounds = calculateGridBounds();
+        map.fitBounds(gridBounds, { padding: [15, 15] });
+        fillCentreTable();
+        addLegend();
+        showFrame(0);
+        startAnimation();
+        status.textContent = `Loaded ${forecast.length} hourly fields (${sourceWasKelvin ? "Kelvin converted to °C" : "interpreted as °C"}).`;
+      } catch (error) {
+        stopAnimation();
+        previousButton.disabled = true;
+        nextButton.disabled = true;
+        playPauseButton.disabled = true;
+        slider.disabled = true;
+        frameLabel.textContent = "Forecast unavailable";
+        status.classList.add("error");
+        status.textContent = `${error.message} Serve this folder over HTTP; fetch() will not work reliably from file://.`;
+        console.error(error);
+      }
+    }
+
+    initialise();
   </script>
 </body>
 </html>
