@@ -475,19 +475,22 @@
     playPauseButton.addEventListener("click", () => animationTimer === null ? startAnimation() : stopAnimation());
     slider.addEventListener("input", event => { stopAnimation(); showFrame(Number(event.target.value)); });
 
+    const hoverTooltip = L.tooltip({ sticky: true, direction: "top", opacity: 0.95 });
+
     map.on("mousemove", event => {
       if (!forecast || !gridBounds.contains(event.latlng)) {
-        map.closeTooltip();
+        hoverTooltip.remove();
         return;
       }
       const value = temperatureAtLatLng(event.latlng);
       const temperature = value === null ? "No data" : `${value.toFixed(2)} °C`;
-      map.openTooltip(
-        `<strong>${temperature}</strong><br>${event.latlng.lat.toFixed(5)}° N, ${event.latlng.lng.toFixed(5)}° E`,
-        event.latlng,
-        { sticky: true, direction: "top", opacity: 0.95 }
-      );
+      hoverTooltip
+        .setLatLng(event.latlng)
+        .setContent(`<strong>${temperature}</strong><br>${event.latlng.lat.toFixed(5)}° N, ${event.latlng.lng.toFixed(5)}° E`);
+      if (!map.hasLayer(hoverTooltip)) hoverTooltip.addTo(map);
     });
+
+    map.getContainer().addEventListener("mouseleave", () => hoverTooltip.remove());
 
     async function initialise() {
       try {
